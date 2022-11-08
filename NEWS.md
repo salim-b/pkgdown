@@ -1,4 +1,4 @@
-# pkgdown (development version)
+# pkgdown 2.0.7
 
 * Tweak German translation (@krlmlr, @mgirlich, #2149)
 * Remove mention of (defunct) Twitter card validator, provide alternatives (@Bisaloo, #2185)
