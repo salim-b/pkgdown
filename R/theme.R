@@ -58,17 +58,19 @@ assemble_ext_assets <- function(pkg,
         cli::cli_alert_info("{.var hash} is: {.val {hash}}")
         cli::cli_alert_info(paste0("{.var raw hash} is: {.val ",
                                    switch(sha_version,
-                                          "256" = openssl::sha256(con),
-                                          "384" = openssl::sha384(con),
-                                          "512" = openssl::sha512(con)),
+                                          "256" = openssl::sha256(file(path, encoding = "UTF-8")),
+                                          "384" = openssl::sha384(file(path, encoding = "UTF-8")),
+                                          "512" = openssl::sha512(file(path, encoding = "UTF-8"))),
                                    "}"))
         cli::cli_bullets(summary(con) %>% purrr::imap_chr(~ paste0(.y, ": ", .x)) %>% unname() %>% rlang::set_names("*"))
+        cat(paste0(readLines(file(path, encoding = "UTF-8"), warn = FALSE), collapse = "\n"))
 
         cli::cli_abort(paste0(
           "Hash of downloaded {(.x$type)} asset doesn't match {.field ",
           "integrity} value of {.val {(.x$integrity)}}. Asset URL is: {.url {(.x$url)}}"
         ))
       }
+      close(con)
 
       # download subressources (webfonts etc.) if necessary
       if (isTRUE(.x$has_subressources)) {
