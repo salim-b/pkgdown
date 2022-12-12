@@ -31,7 +31,7 @@ assemble_ext_assets <- function(pkg,
       download.file(.x$url, path, quiet = TRUE)
 
       # check file integrity
-      file_content <- file(path, open = "rb", encoding = "UTF-8")
+      con <- file(path, open = "rb", encoding = "UTF-8")
       sha_version <- regmatches(
         .x$integrity,
         regexpr("(?<=^sha)\\d{3}", .x$integrity, perl = TRUE)
@@ -42,9 +42,9 @@ assemble_ext_assets <- function(pkg,
       )
       hash <- openssl::base64_encode(switch(
         sha_version,
-        "256" = openssl::sha256(file_content),
-        "384" = openssl::sha384(file_content),
-        "512" = openssl::sha512(file_content),
+        "256" = openssl::sha256(con),
+        "384" = openssl::sha384(con),
+        "512" = openssl::sha512(con),
         cli::cli_abort(paste0(
           "Invalid {.field integrity} value set in {.file {path_assets_yaml}}: ",
           "{.val {(.x$integrity)}} Allowed are only SHA-256, SHA-384 and SHA-512."
@@ -56,7 +56,13 @@ assemble_ext_assets <- function(pkg,
         cli::cli_alert_info("{.var sha_version} is: {.val {sha_version}}")
         cli::cli_alert_info("{.var hash_target} is: {.val {hash_target}}")
         cli::cli_alert_info("{.var hash} is: {.val {hash}}")
-        cli::cli_bullets(summary(file_content) %>% purrr::imap_chr(~ paste0(.y, ": ", .x)) %>% unname() %>% rlang::set_names("*"))
+        cli::cli_alert_info(paste0("{.var raw hash} is: {.val ",
+                                   switch(sha_version,
+                                          "256" = openssl::sha256(con),
+                                          "384" = openssl::sha384(con),
+                                          "512" = openssl::sha512(con)),
+                                   "}"))
+        cli::cli_bullets(summary(con) %>% purrr::imap_chr(~ paste0(.y, ": ", .x)) %>% unname() %>% rlang::set_names("*"))
 
         cli::cli_abort(paste0(
           "Hash of downloaded {(.x$type)} asset doesn't match {.field ",
