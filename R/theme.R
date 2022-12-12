@@ -21,62 +21,44 @@ build_bslib <- function(pkg = ".") {
 
 assemble_ext_assets <- function(pkg,
                                 use_ext = FALSE) {
-  path_assets_yaml <- path_pkgdown(paste0("BS", pkg$bs_version), "assets_external.yaml")
+  path_assets_yaml <- path_pkgdown(
+    paste0("BS", pkg$bs_version),
+    "assets_external.yaml"
+  )
   deps_ext <- yaml::read_yaml(path_assets_yaml)
 
   purrr::map_chr(deps_ext, ~ {
     # download resource if necessary
     if (!use_ext) {
       path <- path_deps(pkg, basename(.x$url))
-      download.file(.x$url, path, quiet = TRUE)
+      download.file(.x$url, path, quiet = TRUE, mode = "wb")
 
       # check file integrity
-      con <- file(path, open = "rb", encoding = "UTF-8")
-      sha_version <- regmatches(
+      sha_size <- as.integer(regmatches(
         .x$integrity,
         regexpr("(?<=^sha)\\d{3}", .x$integrity, perl = TRUE)
-      )
+      ))
+      if (!(sha_size %in% c(256L, 384L, 512L))) {
+        cli::cli_abort(paste0(
+          "Invalid {.field integrity} value set in {.file ",
+          "{path_assets_yaml}}: {.val {(.x$integrity)}} Allowed are only ",
+          "SHA-256, SHA-384 and SHA-512."
+        ))
+      }
+      con <- file(path, encoding = "UTF-8")
+      hash <- openssl::base64_encode(openssl::sha2(con, sha_size))
       hash_target <- regmatches(
         .x$integrity,
         regexpr("(?<=^sha\\d{3}-).+", .x$integrity, perl = TRUE)
       )
-      hash <- openssl::base64_encode(switch(
-        sha_version,
-        "256" = openssl::sha256(con),
-        "384" = openssl::sha384(con),
-        "512" = openssl::sha512(con),
-        cli::cli_abort(paste0(
-          "Invalid {.field integrity} value set in {.file {path_assets_yaml}}: ",
-          "{.val {(.x$integrity)}} Allowed are only SHA-256, SHA-384 and SHA-512."
-        ))
-      ))
 
       if (hash_target != hash) {
-        cli::cli_alert_info("{.var path} is: {.val {path}}")
-        cli::cli_alert_info("{.var sha_version} is: {.val {sha_version}}")
-        cli::cli_alert_info("{.var hash_target} is: {.val {hash_target}}")
-        cli::cli_alert_info("{.var hash} is: {.val {hash}}")
-        cli::cli_alert_info(paste0("{.var fresh hash} is: {.val ",
-                                   openssl::base64_encode(switch(sha_version,
-                                                                 "256" = openssl::sha256(file(path, encoding = "UTF-8")),
-                                                                 "384" = openssl::sha384(file(path, encoding = "UTF-8")),
-                                                                 "512" = openssl::sha512(file(path, encoding = "UTF-8")))),
-                                   "}"))
-        cli::cli_alert_info(paste0("{.var fresh raw hash} is: {.val ",
-                                   switch(sha_version,
-                                          "256" = openssl::sha256(file(path, encoding = "UTF-8")),
-                                          "384" = openssl::sha384(file(path, encoding = "UTF-8")),
-                                          "512" = openssl::sha512(file(path, encoding = "UTF-8"))),
-                                   "}"))
-        cli::cli_bullets(summary(con) %>% purrr::imap_chr(~ paste0(.y, ": ", .x)) %>% unname() %>% rlang::set_names("*"))
-        cat(paste0(readLines(file(path, encoding = "UTF-8"), warn = FALSE), collapse = "\n"))
-
         cli::cli_abort(paste0(
           "Hash of downloaded {(.x$type)} asset doesn't match {.field ",
-          "integrity} value of {.val {(.x$integrity)}}. Asset URL is: {.url {(.x$url)}}"
+          "integrity} value of {.val {(.x$integrity)}}. Asset URL is: {.url ",
+          "{(.x$url)}}"
         ))
       }
-      close(con)
 
       # download subressources (webfonts etc.) if necessary
       if (isTRUE(.x$has_subressources)) {
