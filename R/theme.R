@@ -52,10 +52,11 @@ assemble_ext_assets <- function(pkg,
       ))
 
       if (hash_target != hash) {
+        cli::cli_alert_info("{.var path} is: {.val {path}}")
         cli::cli_alert_info("{.var sha_version} is: {.val {sha_version}}")
         cli::cli_alert_info("{.var hash_target} is: {.val {hash_target}}")
         cli::cli_alert_info("{.var hash} is: {.val {hash}}")
-        print(file_content)
+        cli::cli_bullets(summary(file_content) %>% purrr::imap_chr(~ paste0(.y, ": ", .x)) %>% unname() %>% rlang::set_names("*"))
 
         cli::cli_abort(paste0(
           "Hash of downloaded {(.x$type)} asset doesn't match {.field ",
