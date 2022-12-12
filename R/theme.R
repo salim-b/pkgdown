@@ -56,7 +56,13 @@ assemble_ext_assets <- function(pkg,
         cli::cli_alert_info("{.var sha_version} is: {.val {sha_version}}")
         cli::cli_alert_info("{.var hash_target} is: {.val {hash_target}}")
         cli::cli_alert_info("{.var hash} is: {.val {hash}}")
-        cli::cli_alert_info(paste0("{.var raw hash} is: {.val ",
+        cli::cli_alert_info(paste0("{.var fresh hash} is: {.val ",
+                                   openssl::base64_encode(switch(sha_version,
+                                                                 "256" = openssl::sha256(file(path, encoding = "UTF-8")),
+                                                                 "384" = openssl::sha384(file(path, encoding = "UTF-8")),
+                                                                 "512" = openssl::sha512(file(path, encoding = "UTF-8")))),
+                                   "}"))
+        cli::cli_alert_info(paste0("{.var fresh raw hash} is: {.val ",
                                    switch(sha_version,
                                           "256" = openssl::sha256(file(path, encoding = "UTF-8")),
                                           "384" = openssl::sha384(file(path, encoding = "UTF-8")),
